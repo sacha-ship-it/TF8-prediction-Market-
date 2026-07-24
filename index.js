@@ -5,6 +5,7 @@ const TOKEN = process.env.TOKEN
 const CLIENT_ID = process.env.CLIENT_ID
 const GUILD_ID = process.env.GUILD_ID
 const SCORES_CHANNEL_ID = process.env.SCORES_CHANNEL_ID
+const STAFF_CHANNEL_ID = process.env.STAFF_CHANNEL_ID
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
@@ -314,6 +315,19 @@ client.on('interactionCreate', async interaction => {
     const content = await updateMarketMessage(market, canal)
     const msg = await canal.send(content)
     market.messageId = msg.id
+
+    // Envoyer les infos dans le canal staff
+    const staffChannel = await client.channels.fetch(STAFF_CHANNEL_ID)
+    await staffChannel.send(
+      `**Nouveau market cree**\n` +
+      `**ID :** \`${marketId}\`\n` +
+      `**Titre :** ${titre}\n` +
+      `**Fermeture :** ${formatCloseTime(fermeture)}\n` +
+      `**Choix :**\n${choices.map((c, i) => `  ${i + 1}. ${c.label}`).join('\n')}\n\n` +
+      `Pour donner les resultats :\n` +
+      `/resultat id:${marketId} resultats:true/false/${choices.map(() => '...').join('/')}\n` +
+      `(un true/false par choix dans l ordre)`
+    )
 
     await saveToDiscord()
     await interaction.reply({ content: `Market **#${marketId}** cree avec **${choices.length} choix** ! Fermeture le ${formatCloseTime(fermeture)}`, ephemeral: true })
