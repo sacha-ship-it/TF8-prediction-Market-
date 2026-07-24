@@ -15,26 +15,17 @@ let markets = {}
 let marketCounter = 0
 let scoresMessageId = null
 
-// ─────────────────────────────────────────
-// COTES DYNAMIQUES
-// ─────────────────────────────────────────
-
 function calculateOdds(market) {
   const totalPerChoice = market.choices.map((_, i) =>
     Object.values(market.bets[i] || {}).reduce((a, b) => a + b, 0)
   )
   const totalAll = totalPerChoice.reduce((a, b) => a + b, 0)
-
   return market.choices.map((_, i) => {
     if (totalAll === 0 || totalPerChoice[i] === 0) return 2.00
     const rawOdds = (totalAll / totalPerChoice[i]) * 0.95
     return Math.max(1.01, Math.round(rawOdds * 100) / 100)
   })
 }
-
-// ─────────────────────────────────────────
-// SAUVEGARDE / CHARGEMENT
-// ─────────────────────────────────────────
 
 async function saveToDiscord() {
   try {
@@ -71,10 +62,6 @@ async function loadFromDiscord() {
   }
 }
 
-// ─────────────────────────────────────────
-// RESET HEBDOMADAIRE
-// ─────────────────────────────────────────
-
 async function weeklyReset() {
   try {
     const guild = await client.guilds.fetch(GUILD_ID)
@@ -89,10 +76,6 @@ async function weeklyReset() {
     console.error('Erreur reset:', e.message)
   }
 }
-
-// ─────────────────────────────────────────
-// FORMAT DATE
-// ─────────────────────────────────────────
 
 function formatCloseTime(dateStr) {
   try {
@@ -119,10 +102,6 @@ function isMarketClosed(market) {
   }
 }
 
-// ─────────────────────────────────────────
-// AFFICHAGE MARKET
-// ─────────────────────────────────────────
-
 async function updateMarketMessage(market, channel) {
   const closed = isMarketClosed(market)
   const odds = calculateOdds(market)
@@ -147,16 +126,13 @@ async function updateMarketMessage(market, channel) {
 
   embed.setDescription(description)
 
-  const buttons = []
-  market.choices.forEach((choice, i) => {
-    buttons.push(
-      new ButtonBuilder()
-        .setCustomId(`bet_${market.id}_${i}`)
-        .setLabel(`${choice.label} (x${odds[i]})`)
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(closed)
-    )
-  })
+  const buttons = market.choices.map((choice, i) =>
+    new ButtonBuilder()
+      .setCustomId(`bet_${market.id}_${i}`)
+      .setLabel(`${choice.label} (x${odds[i]})`)
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(closed)
+  )
 
   const rows = []
   for (let i = 0; i < buttons.length; i += 5) {
@@ -166,10 +142,6 @@ async function updateMarketMessage(market, channel) {
   return { embeds: [embed], components: rows }
 }
 
-// ─────────────────────────────────────────
-// COMMANDES
-// ─────────────────────────────────────────
-
 async function registerCommands() {
   const commands = [
     new SlashCommandBuilder()
@@ -177,8 +149,15 @@ async function registerCommands() {
       .setDescription('Cree un nouveau market de prediction')
       .addStringOption(o => o.setName('titre').setDescription('Titre du market').setRequired(true))
       .addStringOption(o => o.setName('fermeture').setDescription('Date et heure de fermeture (ex: 2026-07-25 20:00)').setRequired(true))
-      .addStringOption(o => o.setName('choix').setDescription('Choix separes par / (ex: SP500 vert/SP500 rouge/Flat)').setRequired(true))
       .addChannelOption(o => o.setName('canal').setDescription('Canal ou publier').setRequired(true))
+      .addStringOption(o => o.setName('choix1').setDescription('Choix 1').setRequired(true))
+      .addStringOption(o => o.setName('choix2').setDescription('Choix 2').setRequired(true))
+      .addStringOption(o => o.setName('choix3').setDescription('Choix 3').setRequired(false))
+      .addStringOption(o => o.setName('choix4').setDescription('Choix 4').setRequired(false))
+      .addStringOption(o => o.setName('choix5').setDescription('Choix 5').setRequired(false))
+      .addStringOption(o => o.setName('choix6').setDescription('Choix 6').setRequired(false))
+      .addStringOption(o => o.setName('choix7').setDescription('Choix 7').setRequired(false))
+      .addStringOption(o => o.setName('choix8').setDescription('Choix 8').setRequired(false))
       .addStringOption(o => o.setName('image').setDescription('URL image (optionnel)').setRequired(false)),
 
     new SlashCommandBuilder()
@@ -211,10 +190,6 @@ async function registerCommands() {
   console.log('Commandes enregistrees')
 }
 
-// ─────────────────────────────────────────
-// READY
-// ─────────────────────────────────────────
-
 client.on('ready', async () => {
   console.log(`Bot connecte : ${client.user.tag}`)
   await registerCommands()
@@ -222,13 +197,8 @@ client.on('ready', async () => {
   cron.schedule('1 0 * * 1', weeklyReset, { timezone: 'Europe/Paris' })
 })
 
-// ─────────────────────────────────────────
-// INTERACTIONS
-// ─────────────────────────────────────────
-
 client.on('interactionCreate', async interaction => {
 
-  // ── BOUTON PARIS ──
   if (interaction.isButton() && interaction.customId.startsWith('bet_')) {
     const parts = interaction.customId.split('_')
     const marketId = parts[1]
@@ -255,7 +225,6 @@ client.on('interactionCreate', async interaction => {
     await interaction.showModal(modal)
   }
 
-  // ── MODAL PARIS ──
   if (interaction.isModalSubmit() && interaction.customId.startsWith('betmodal_')) {
     const parts = interaction.customId.split('_')
     const marketId = parts[1]
@@ -277,7 +246,6 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: 'Ce market est ferme.', ephemeral: true })
     }
 
-    // Rembourser l ancien pari sur ce market
     market.choices.forEach((_, i) => {
       if (market.bets[i] && market.bets[i][userId]) {
         coins[userId] = (coins[userId] || 0) + market.bets[i][userId]
@@ -305,11 +273,9 @@ client.on('interactionCreate', async interaction => {
 
   if (!interaction.isChatInputCommand()) return
 
-  // ── CREATEMARKET ──
   if (interaction.commandName === 'createmarket') {
     const titre = interaction.options.getString('titre')
     const fermeture = interaction.options.getString('fermeture')
-    const choixRaw = interaction.options.getString('choix')
     const canal = interaction.options.getChannel('canal')
     const image = interaction.options.getString('image')
 
@@ -318,10 +284,14 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: 'Format de date invalide. Utilise : 2026-07-25 20:00', ephemeral: true })
     }
 
-    const choices = choixRaw.split('/').map(c => ({ label: c.trim() }))
+    const choices = []
+    for (let i = 1; i <= 8; i++) {
+      const choix = interaction.options.getString(`choix${i}`)
+      if (choix) choices.push({ label: choix.trim() })
+    }
 
     if (choices.length < 2) {
-      return interaction.reply({ content: 'Il faut au moins 2 choix separes par /', ephemeral: true })
+      return interaction.reply({ content: 'Il faut au moins 2 choix.', ephemeral: true })
     }
 
     marketCounter++
@@ -349,7 +319,6 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply({ content: `Market **#${marketId}** cree avec **${choices.length} choix** ! Fermeture le ${formatCloseTime(fermeture)}`, ephemeral: true })
   }
 
-  // ── RESULTAT ──
   if (interaction.commandName === 'resultat') {
     const marketId = interaction.options.getString('id')
     const resultatsRaw = interaction.options.getString('resultats')
@@ -374,11 +343,10 @@ client.on('interactionCreate', async interaction => {
 
     const finalOdds = calculateOdds(market)
     const allWinners = []
-    const totalLosers = { count: 0 }
+    let totalLosers = 0
 
     market.choices.forEach((choice, i) => {
       const isWinner = resultats[i]
-
       if (isWinner && market.bets[i]) {
         Object.entries(market.bets[i]).forEach(([userId, amount]) => {
           const gain = Math.floor(amount * finalOdds[i])
@@ -386,7 +354,7 @@ client.on('interactionCreate', async interaction => {
           allWinners.push({ userId, amount, gain, choice: choice.label, odds: finalOdds[i] })
         })
       } else if (!isWinner && market.bets[i]) {
-        totalLosers.count += Object.keys(market.bets[i]).length
+        totalLosers += Object.keys(market.bets[i]).length
       }
     })
 
@@ -412,8 +380,8 @@ client.on('interactionCreate', async interaction => {
       resultText += 'Aucun gagnant sur ce market.\n'
     }
 
-    if (totalLosers.count > 0) {
-      resultText += `\n${totalLosers.count} membre(s) ont perdu leurs coins.`
+    if (totalLosers > 0) {
+      resultText += `\n${totalLosers} membre(s) ont perdu leurs coins.`
     }
 
     await channel.send(resultText)
@@ -421,16 +389,15 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply({ content: `Resultats du market #${marketId} publies et gains distribues !`, ephemeral: true })
   }
 
-  // ── CLASSEMENT ──
   if (interaction.commandName === 'classement') {
     const sorted = Object.entries(coins)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 20)
 
-    const medals = ['1.', '2.', '3.']
+    const medals = ['🥇', '🥈', '🥉']
     const classement = sorted.length
       ? sorted.map(([id, c], i) => {
-          const rank = i < 3 ? medals[i] : (i + 1) + '.'
+          const rank = medals[i] || (i + 1) + '.'
           return `${rank} <@${id}> : **${c} coins**`
         }).join('\n')
       : 'Aucun participant pour le moment.'
@@ -445,7 +412,6 @@ client.on('interactionCreate', async interaction => {
     })
   }
 
-  // ── MARKETS ──
   if (interaction.commandName === 'markets') {
     const openMarkets = Object.values(markets).filter(m => !isMarketClosed(m) && !m.resultDone)
     const closedMarkets = Object.values(markets).filter(m => isMarketClosed(m) || m.resultDone)
@@ -479,7 +445,6 @@ client.on('interactionCreate', async interaction => {
     })
   }
 
-  // ── MESCOINS ──
   if (interaction.commandName === 'mescoins') {
     const userCoins = coins[interaction.user.id] || 0
     await interaction.reply({
@@ -488,7 +453,6 @@ client.on('interactionCreate', async interaction => {
     })
   }
 
-  // ── GIVECOINS ──
   if (interaction.commandName === 'givecoins') {
     const amount = interaction.options.getInteger('montant')
     const guild = await client.guilds.fetch(GUILD_ID)
