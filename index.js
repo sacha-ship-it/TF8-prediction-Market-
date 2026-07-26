@@ -41,7 +41,7 @@ async function saveToDiscord() {
       scoresMessageId = msg.id
     }
   } catch (e) {
-    console.error('Erreur sauvegarde:', e.message)
+    console.error('Save error:', e.message)
   }
 }
 
@@ -56,10 +56,10 @@ async function loadFromDiscord() {
       markets = parsed.markets || {}
       marketCounter = parsed.marketCounter || 0
       scoresMessageId = dataMsg.id
-      console.log('Donnees chargees')
+      console.log('Data loaded')
     }
   } catch (e) {
-    console.log('Pas de donnees existantes:', e.message)
+    console.log('No existing data:', e.message)
   }
 }
 
@@ -72,16 +72,16 @@ async function weeklyReset() {
       if (!member.user.bot) coins[member.user.id] = 1000
     })
     await saveToDiscord()
-    console.log('Reset effectue - 1000 coins distribues')
+    console.log('Weekly reset done - 1000 coins distributed')
   } catch (e) {
-    console.error('Erreur reset:', e.message)
+    console.error('Reset error:', e.message)
   }
 }
 
 function formatCloseTime(dateStr) {
   try {
     const d = new Date(dateStr)
-    return d.toLocaleString('fr-FR', {
+    return d.toLocaleString('en-GB', {
       timeZone: 'Europe/Paris',
       day: '2-digit',
       month: '2-digit',
@@ -110,19 +110,19 @@ async function updateMarketMessage(market, channel) {
   const embed = new EmbedBuilder()
     .setTitle(`[#${market.id}] ${market.title}`)
     .setColor(closed ? '#FF0000' : '#FFD700')
-    .setFooter({ text: closed ? 'Market ferme - en attente des resultats' : `Fermeture : ${formatCloseTime(market.closeTime)}` })
+    .setFooter({ text: closed ? 'Market closed - awaiting results' : `Closes : ${formatCloseTime(market.closeTime)}` })
 
   if (market.imageUrl) embed.setImage(market.imageUrl)
 
   let description = closed
-    ? 'Market ferme - resultats a venir\n\n'
-    : 'Placez vos paris ! Les cotes evoluent en temps reel.\nGains calcules sur la cote a la fermeture.\n\n'
+    ? 'Market closed - results coming soon\n\n'
+    : 'Place your bets! Odds update in real time.\nWinnings calculated on closing odds.\n\n'
 
   market.choices.forEach((choice, i) => {
     const totalBets = Object.values(market.bets[i] || {}).reduce((a, b) => a + b, 0)
     const betCount = Object.keys(market.bets[i] || {}).length
     description += `**${i + 1}. ${choice.label}**\n`
-    description += `Cote : **x${odds[i]}** | ${betCount} pari(s) - ${totalBets} coins\n\n`
+    description += `Odds : **x${odds[i]}** | ${betCount} bet(s) - ${totalBets} coins\n\n`
   })
 
   embed.setDescription(description)
@@ -147,52 +147,52 @@ async function registerCommands() {
   const commands = [
     new SlashCommandBuilder()
       .setName('createmarket')
-      .setDescription('Cree un nouveau market de prediction')
-      .addStringOption(o => o.setName('titre').setDescription('Titre du market').setRequired(true))
-      .addStringOption(o => o.setName('fermeture').setDescription('Date et heure de fermeture (ex: 2026-07-25 20:00)').setRequired(true))
-      .addChannelOption(o => o.setName('canal').setDescription('Canal ou publier').setRequired(true))
-      .addStringOption(o => o.setName('choix1').setDescription('Choix 1').setRequired(true))
-      .addStringOption(o => o.setName('choix2').setDescription('Choix 2').setRequired(true))
-      .addStringOption(o => o.setName('choix3').setDescription('Choix 3').setRequired(false))
-      .addStringOption(o => o.setName('choix4').setDescription('Choix 4').setRequired(false))
-      .addStringOption(o => o.setName('choix5').setDescription('Choix 5').setRequired(false))
-      .addStringOption(o => o.setName('choix6').setDescription('Choix 6').setRequired(false))
-      .addStringOption(o => o.setName('choix7').setDescription('Choix 7').setRequired(false))
-      .addStringOption(o => o.setName('choix8').setDescription('Choix 8').setRequired(false))
-      .addStringOption(o => o.setName('image').setDescription('URL image (optionnel)').setRequired(false)),
+      .setDescription('Create a new prediction market')
+      .addStringOption(o => o.setName('title').setDescription('Market title').setRequired(true))
+      .addStringOption(o => o.setName('closing').setDescription('Closing date and time (ex: 2026-07-25 20:00)').setRequired(true))
+      .addChannelOption(o => o.setName('channel').setDescription('Channel to post in').setRequired(true))
+      .addStringOption(o => o.setName('choice1').setDescription('Choice 1').setRequired(true))
+      .addStringOption(o => o.setName('choice2').setDescription('Choice 2').setRequired(true))
+      .addStringOption(o => o.setName('choice3').setDescription('Choice 3').setRequired(false))
+      .addStringOption(o => o.setName('choice4').setDescription('Choice 4').setRequired(false))
+      .addStringOption(o => o.setName('choice5').setDescription('Choice 5').setRequired(false))
+      .addStringOption(o => o.setName('choice6').setDescription('Choice 6').setRequired(false))
+      .addStringOption(o => o.setName('choice7').setDescription('Choice 7').setRequired(false))
+      .addStringOption(o => o.setName('choice8').setDescription('Choice 8').setRequired(false))
+      .addStringOption(o => o.setName('image').setDescription('Image URL (optional)').setRequired(false)),
 
     new SlashCommandBuilder()
-      .setName('resultat')
-      .setDescription('Donne les resultats d un market et distribue les gains')
-      .addStringOption(o => o.setName('id').setDescription('ID du market').setRequired(true))
-      .addStringOption(o => o.setName('resultats').setDescription('Resultats par choix separes par / (ex: false/true/false)').setRequired(true)),
+      .setName('result')
+      .setDescription('Set the results of a market and distribute winnings')
+      .addStringOption(o => o.setName('id').setDescription('Market ID').setRequired(true))
+      .addStringOption(o => o.setName('results').setDescription('Results per choice separated by / (ex: false/true/false)').setRequired(true)),
 
     new SlashCommandBuilder()
-      .setName('classement')
-      .setDescription('Affiche le classement des coins'),
+      .setName('leaderboard')
+      .setDescription('Show the coins leaderboard'),
 
     new SlashCommandBuilder()
-      .setName('mescoins')
-      .setDescription('Affiche ton solde de coins'),
+      .setName('mycoins')
+      .setDescription('Show your coin balance'),
 
     new SlashCommandBuilder()
       .setName('givecoins')
-      .setDescription('Donne des coins a tous les membres')
-      .addIntegerOption(o => o.setName('montant').setDescription('Nombre de coins').setRequired(true)),
+      .setDescription('Give coins to all members')
+      .addIntegerOption(o => o.setName('amount').setDescription('Number of coins').setRequired(true)),
 
     new SlashCommandBuilder()
       .setName('markets')
-      .setDescription('Liste tous les markets'),
+      .setDescription('List all markets'),
 
   ].map(c => c.toJSON())
 
   const rest = new REST({ version: '10' }).setToken(TOKEN)
   await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands })
-  console.log('Commandes enregistrees')
+  console.log('Commands registered')
 }
 
 client.on('ready', async () => {
-  console.log(`Bot connecte : ${client.user.tag}`)
+  console.log(`Bot connected : ${client.user.tag}`)
   await registerCommands()
   await loadFromDiscord()
   cron.schedule('1 0 * * 1', weeklyReset, { timezone: 'Europe/Paris' })
@@ -207,17 +207,17 @@ client.on('interactionCreate', async interaction => {
     const market = markets[marketId]
 
     if (!market || isMarketClosed(market)) {
-      return interaction.reply({ content: 'Ce market est ferme.', ephemeral: true })
+      return interaction.reply({ content: 'This market is closed.', ephemeral: true })
     }
 
     const modal = new ModalBuilder()
       .setCustomId(`betmodal_${marketId}_${choiceIndex}`)
-      .setTitle(`Paris : ${market.choices[choiceIndex].label}`)
+      .setTitle(`Bet on : ${market.choices[choiceIndex].label}`)
 
     const userCoins = coins[interaction.user.id] || 0
     const input = new TextInputBuilder()
       .setCustomId('amount')
-      .setLabel(`Combien de coins ? (Solde : ${userCoins})`)
+      .setLabel(`How many coins? (Balance: ${userCoins})`)
       .setStyle(TextInputStyle.Short)
       .setPlaceholder('Ex: 200')
       .setRequired(true)
@@ -235,16 +235,16 @@ client.on('interactionCreate', async interaction => {
     const amount = parseInt(interaction.fields.getTextInputValue('amount'))
 
     if (isNaN(amount) || amount <= 0) {
-      return interaction.reply({ content: 'Montant invalide.', ephemeral: true })
+      return interaction.reply({ content: 'Invalid amount.', ephemeral: true })
     }
 
     const userCoins = coins[userId] || 0
     if (userCoins < amount) {
-      return interaction.reply({ content: `Pas assez de coins. Solde : **${userCoins} coins**`, ephemeral: true })
+      return interaction.reply({ content: `Not enough coins. Balance: **${userCoins} coins**`, ephemeral: true })
     }
 
     if (isMarketClosed(market)) {
-      return interaction.reply({ content: 'Ce market est ferme.', ephemeral: true })
+      return interaction.reply({ content: 'This market is closed.', ephemeral: true })
     }
 
     market.choices.forEach((_, i) => {
@@ -267,7 +267,7 @@ client.on('interactionCreate', async interaction => {
 
     const currentOdds = calculateOdds(market)
     await interaction.reply({
-      content: `Tu as mise **${amount} coins** sur **${market.choices[choiceIndex].label}**\nGains calcules sur la cote a la fermeture (actuellement x${currentOdds[choiceIndex]})\nSolde restant : **${coins[userId]} coins**`,
+      content: `You bet **${amount} coins** on **${market.choices[choiceIndex].label}**\nWinnings calculated on closing odds (currently x${currentOdds[choiceIndex]})\nRemaining balance: **${coins[userId]} coins**`,
       ephemeral: true
     })
   }
@@ -275,24 +275,24 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return
 
   if (interaction.commandName === 'createmarket') {
-    const titre = interaction.options.getString('titre')
-    const fermeture = interaction.options.getString('fermeture')
-    const canal = interaction.options.getChannel('canal')
+    const title = interaction.options.getString('title')
+    const closing = interaction.options.getString('closing')
+    const channel = interaction.options.getChannel('channel')
     const image = interaction.options.getString('image')
 
-    const dateTest = new Date(fermeture)
+    const dateTest = new Date(closing)
     if (isNaN(dateTest.getTime())) {
-      return interaction.reply({ content: 'Format de date invalide. Utilise : 2026-07-25 20:00', ephemeral: true })
+      return interaction.reply({ content: 'Invalid date format. Use: 2026-07-25 20:00', ephemeral: true })
     }
 
     const choices = []
     for (let i = 1; i <= 8; i++) {
-      const choix = interaction.options.getString(`choix${i}`)
-      if (choix) choices.push({ label: choix.trim() })
+      const choice = interaction.options.getString(`choice${i}`)
+      if (choice) choices.push({ label: choice.trim() })
     }
 
     if (choices.length < 2) {
-      return interaction.reply({ content: 'Il faut au moins 2 choix.', ephemeral: true })
+      return interaction.reply({ content: 'You need at least 2 choices.', ephemeral: true })
     }
 
     marketCounter++
@@ -300,56 +300,55 @@ client.on('interactionCreate', async interaction => {
 
     const market = {
       id: marketId,
-      title: titre,
-      closeTime: fermeture,
+      title,
+      closeTime: closing,
       choices,
       bets: {},
       closed: false,
-      channelId: canal.id,
+      channelId: channel.id,
       messageId: null,
       imageUrl: image || null
     }
 
     markets[marketId] = market
 
-    const content = await updateMarketMessage(market, canal)
-    const msg = await canal.send(content)
+    const content = await updateMarketMessage(market, channel)
+    const msg = await channel.send(content)
     market.messageId = msg.id
 
-    // Envoyer les infos dans le canal staff
     const staffChannel = await client.channels.fetch(STAFF_CHANNEL_ID)
     await staffChannel.send(
-      `**Nouveau market cree**\n` +
-      `**ID :** \`${marketId}\`\n` +
-      `**Titre :** ${titre}\n` +
-      `**Fermeture :** ${formatCloseTime(fermeture)}\n` +
-      `**Choix :**\n${choices.map((c, i) => `  ${i + 1}. ${c.label}`).join('\n')}\n\n` +
-      `Pour donner les resultats :\n` +
-      `/resultat id:${marketId} resultats:true/false/${choices.map(() => '...').join('/')}\n` +
-      `(un true/false par choix dans l ordre)`
+      `**New market created**\n` +
+      `**ID:** \`${marketId}\`\n` +
+      `**Title:** ${title}\n` +
+      `**Closes:** ${formatCloseTime(closing)}\n` +
+      `**Choices:**\n${choices.map((c, i) => `  ${i + 1}. ${c.label}`).join('\n')}\n\n` +
+      `To set results:\n` +
+      `/result id:${marketId} results:true/false/${choices.map(() => '...').join('/')}\n` +
+      `(one true/false per choice in order)`
     )
 
     await saveToDiscord()
-    await interaction.reply({ content: `Market **#${marketId}** cree avec **${choices.length} choix** ! Fermeture le ${formatCloseTime(fermeture)}`, ephemeral: true })
+    await interaction.reply({ content: `Market **#${marketId}** created with **${choices.length} choices**! Closes on ${formatCloseTime(closing)}`, ephemeral: true })
   }
 
-  if (interaction.commandName === 'resultat') {
+  if (interaction.commandName === 'result') {
     const marketId = interaction.options.getString('id')
-    const resultatsRaw = interaction.options.getString('resultats')
+    const resultsRaw = interaction.options.getString('results')
     const market = markets[marketId]
 
     if (!market) {
-      return interaction.reply({ content: `Market #${marketId} introuvable. Utilise /markets pour voir la liste.`, ephemeral: true })
+      return interaction.reply({ content: `Market #${marketId} not found. Use /markets to see the list.`, ephemeral: true })
     }
 
     if (market.resultDone) {
-      return interaction.reply({ content: 'Le resultat de ce market a deja ete donne.', ephemeral: true })
+      return interaction.reply({ content: 'Results for this market have already been set.', ephemeral: true })
     }
 
-    const resultats = resultatsRaw.split('/').map(r => r.trim().toLowerCase() === 'true')
+    const results = resultsRaw.split('/').map(r => r.trim().toLowerCase() === 'true')
 
-    if (resultats.length !== market.choices.length) {
-      return interaction.reply({ content: `Tu dois donner ${market.choices.length} resultats separes par / (un par choix). Ex: true/false/false`, ephemeral: true })
+    if (results.length !== market.choices.length) {
+      return interaction.reply({ content: `You must provide ${market.choices.length} results separated by / (one per choice). Ex: true/false/false`, ephemeral: true })
     }
 
     market.closed = true
@@ -360,7 +359,7 @@ client.on('interactionCreate', async interaction => {
     let totalLosers = 0
 
     market.choices.forEach((choice, i) => {
-      const isWinner = resultats[i]
+      const isWinner = results[i]
       if (isWinner && market.bets[i]) {
         Object.entries(market.bets[i]).forEach(([userId, amount]) => {
           const gain = Math.floor(amount * finalOdds[i])
@@ -377,51 +376,51 @@ client.on('interactionCreate', async interaction => {
     const updated = await updateMarketMessage(market, channel)
     await message.edit(updated)
 
-    let resultText = `## Resultats - ${market.title}\n\n`
+    let resultText = `## Results - ${market.title}\n\n`
 
     market.choices.forEach((choice, i) => {
-      resultText += `${resultats[i] ? 'TRUE' : 'FALSE'} **${choice.label}**\n`
+      resultText += `${results[i] ? 'TRUE' : 'FALSE'} **${choice.label}**\n`
     })
 
     resultText += '\n'
 
     if (allWinners.length > 0) {
-      resultText += `**Gagnants (${allWinners.length}) :**\n`
+      resultText += `**Winners (${allWinners.length}):**\n`
       allWinners.forEach(w => {
-        resultText += `<@${w.userId}> - mise ${w.amount} sur **${w.choice}** - **+${w.gain} coins** (x${w.odds})\n`
+        resultText += `<@${w.userId}> - bet ${w.amount} on **${w.choice}** - **+${w.gain} coins** (x${w.odds})\n`
       })
     } else {
-      resultText += 'Aucun gagnant sur ce market.\n'
+      resultText += 'No winners on this market.\n'
     }
 
     if (totalLosers > 0) {
-      resultText += `\n${totalLosers} membre(s) ont perdu leurs coins.`
+      resultText += `\n${totalLosers} member(s) lost their coins.`
     }
 
     await channel.send(resultText)
     await saveToDiscord()
-    await interaction.reply({ content: `Resultats du market #${marketId} publies et gains distribues !`, ephemeral: true })
+    await interaction.reply({ content: `Results for market #${marketId} published and winnings distributed!`, ephemeral: true })
   }
 
-  if (interaction.commandName === 'classement') {
+  if (interaction.commandName === 'leaderboard') {
     const sorted = Object.entries(coins)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 20)
 
     const medals = ['🥇', '🥈', '🥉']
-    const classement = sorted.length
+    const leaderboard = sorted.length
       ? sorted.map(([id, c], i) => {
           const rank = medals[i] || (i + 1) + '.'
           return `${rank} <@${id}> : **${c} coins**`
         }).join('\n')
-      : 'Aucun participant pour le moment.'
+      : 'No participants yet.'
 
     await interaction.reply({
       embeds: [new EmbedBuilder()
-        .setTitle('CLASSEMENT PREDICTION MARKET')
-        .setDescription(classement)
+        .setTitle('PREDICTION MARKET LEADERBOARD')
+        .setDescription(leaderboard)
         .setColor('#FFD700')
-        .setFooter({ text: 'Reset chaque lundi a minuit' })],
+        .setFooter({ text: 'Reset every Monday at midnight CET' })],
       ephemeral: false
     })
   }
@@ -433,42 +432,42 @@ client.on('interactionCreate', async interaction => {
     let description = ''
 
     if (openMarkets.length > 0) {
-      description += '**Markets ouverts :**\n'
+      description += '**Open markets:**\n'
       openMarkets.forEach(m => {
-        description += `**#${m.id}** - ${m.title} (ferme le ${formatCloseTime(m.closeTime)})\n`
+        description += `**#${m.id}** - ${m.title} (closes ${formatCloseTime(m.closeTime)})\n`
         m.choices.forEach((c, i) => { description += `  ${i + 1}. ${c.label}\n` })
         description += '\n'
       })
     }
 
     if (closedMarkets.length > 0) {
-      description += '**Markets fermes :**\n'
+      description += '**Closed markets:**\n'
       closedMarkets.forEach(m => {
-        description += `**#${m.id}** - ${m.title} ${m.resultDone ? '(resultats donnes)' : '(en attente resultats)'}\n`
+        description += `**#${m.id}** - ${m.title} ${m.resultDone ? '(results set)' : '(awaiting results)'}\n`
       })
     }
 
-    if (!description) description = 'Aucun market pour le moment.'
+    if (!description) description = 'No markets yet.'
 
     await interaction.reply({
       embeds: [new EmbedBuilder()
-        .setTitle('LISTE DES MARKETS')
+        .setTitle('MARKETS LIST')
         .setDescription(description)
         .setColor('#FFD700')],
       ephemeral: true
     })
   }
 
-  if (interaction.commandName === 'mescoins') {
+  if (interaction.commandName === 'mycoins') {
     const userCoins = coins[interaction.user.id] || 0
     await interaction.reply({
-      content: `Tu as actuellement **${userCoins} coins**`,
+      content: `You currently have **${userCoins} coins**`,
       ephemeral: true
     })
   }
 
   if (interaction.commandName === 'givecoins') {
-    const amount = interaction.options.getInteger('montant')
+    const amount = interaction.options.getInteger('amount')
     const guild = await client.guilds.fetch(GUILD_ID)
     const members = await guild.members.fetch()
 
@@ -479,7 +478,7 @@ client.on('interactionCreate', async interaction => {
     })
 
     await saveToDiscord()
-    await interaction.reply({ content: `**${amount} coins** donnes a tous les membres !`, ephemeral: false })
+    await interaction.reply({ content: `**${amount} coins** given to all members!`, ephemeral: false })
   }
 })
 
